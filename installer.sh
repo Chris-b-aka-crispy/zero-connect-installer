@@ -82,8 +82,9 @@ echo "[*] Extracting package..."
 unzip -q connect-server.zip
 
 # -- Check for expected binary --
-SETUP_BIN="./zero-connect-setup"
-if [[ ! -f "$SETUP_BIN" ]]; then
+SETUP_BIN=$(find . -type f -name "zero-connect-setup" | head -n 1)
+
+if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
     echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
     exit 1
 fi
