@@ -13,15 +13,17 @@ echo ""
 install_package_if_missing() {
     TOOL="$1"
     if ! command -v "$TOOL" &>/dev/null; then
-        echo "[!] '$TOOL' is not installed."
-
+        echo ""
+        echo "[!] Missing required tool: '$TOOL'"
         read -p "    → Would you like to install '$TOOL'? [Y/n] " RESPONSE
-        RESPONSE=${RESPONSE,,}
+        RESPONSE=${RESPONSE,,} # normalize to lowercase
 
         if [[ "$RESPONSE" == "y" || -z "$RESPONSE" ]]; then
             if command -v apt &>/dev/null; then
+                echo "[*] Installing '$TOOL' using apt..."
                 sudo apt update && sudo apt install -y "$TOOL"
             elif command -v yum &>/dev/null; then
+                echo "[*] Installing '$TOOL' using yum..."
                 sudo yum install -y "$TOOL"
             else
                 echo "[ERROR] Unsupported package manager. Please install '$TOOL' manually."
@@ -40,10 +42,9 @@ for tool in curl unzip sudo; do
     install_package_if_missing "$tool"
 done
 
-
 # -- Prompt for ZIP URL --
 echo ""
-read -p "🔗 Enter the Connect Server setup ZIP URL: " SCRIPT_URL
+read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
 
 if [[ -z "$SCRIPT_URL" ]]; then
     echo "[ERROR] No URL provided. Exiting."
@@ -52,7 +53,7 @@ fi
 
 # -- Prompt for secure token input --
 echo ""
-read -s -p "🔑 Enter your Zero Networks Connect Server token: " TOKEN
+read -s -p "Enter your Zero Networks Connect Server token: " TOKEN
 echo ""
 
 if [[ -z "$TOKEN" ]]; then
@@ -70,9 +71,10 @@ echo ""
 echo "[*] Downloading setup package..."
 curl -L -o connect-server.zip "$SCRIPT_URL"
 
-echo "[*] Extracting..."
+echo "[*] Extracting package..."
 unzip -q connect-server.zip
 
+# -- Check for expected binary --
 SETUP_BIN="./zero-connect-setup"
 if [[ ! -f "$SETUP_BIN" ]]; then
     echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
@@ -81,11 +83,13 @@ fi
 
 chmod +x "$SETUP_BIN"
 
-# -- Run setup with token --
-echo "[*] Starting installation..."
+# -- Final install step --
+echo ""
+echo "[*] Running the installer..."
+sleep 1
 sudo "$SETUP_BIN" -token "$TOKEN"
 
 echo ""
-echo "✅ Connect Server installation complete."
-echo "📁 Installed from: $SCRIPT_URL"
+echo "Connect Server installation complete."
+echo "Installed from: $SCRIPT_URL"
 echo ""
