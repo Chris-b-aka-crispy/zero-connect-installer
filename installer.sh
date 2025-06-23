@@ -51,15 +51,22 @@ if [[ -z "$SCRIPT_URL" ]]; then
     exit 1
 fi
 
-# -- Prompt for secure token input --
-echo ""
-read -s -p "Enter your Zero Networks Connect Server token: " TOKEN
-echo ""
+# -- Prompt for token with validation --
+while true; do
+    echo ""
+    read -s -p "🔑 Enter your Zero Networks Connect Server token (input hidden): " TOKEN
+    echo ""
 
-if [[ -z "$TOKEN" ]]; then
-    echo "[ERROR] No token provided. Exiting."
-    exit 1
-fi
+    if [[ -z "$TOKEN" ]]; then
+        echo "[!] Token is blank. Please try again."
+    elif [[ "$TOKEN" =~ \  ]]; then
+        echo "[!] Token contains spaces. Make sure it was copied completely."
+    elif [[ ${#TOKEN} -lt 400 ]]; then
+        echo "[!] Token looks too short. Check for a bad paste or missing characters."
+    else
+        break
+    fi
+done
 
 # -- Prepare temp working directory --
 INSTALL_DIR="zero-connect-install-$(date +%s)"
