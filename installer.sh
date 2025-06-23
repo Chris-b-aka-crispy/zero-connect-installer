@@ -80,22 +80,27 @@ else
     SKIP_DOWNLOAD=false
 fi
 
-# -- Prompt for token with validation loop --
-while true; do
-    echo ""
-    read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
-    echo ""
+# -- Prompt for token only if not set via env var --
+if [[ -z "$ZNC_TOKEN" ]]; then
+  while true; do
+      echo ""
+      read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
+      echo ""
 
-    if [[ -z "$TOKEN" ]]; then
-        echo "Token is blank. Please try again."
-    elif [[ "$TOKEN" =~ \  ]]; then
-        echo "Token contains spaces. Check for copy-paste errors."
-    elif [[ ${#TOKEN} -lt 400 ]]; then
-        echo "Token looks too short. Check that it's complete."
-    else
-        break
-    fi
-done
+      if [[ -z "$TOKEN" ]]; then
+          echo "Token is blank. Please try again."
+      elif [[ "$TOKEN" =~ \  ]]; then
+          echo "Token contains spaces. Check for copy-paste errors."
+      elif [[ ${#TOKEN} -lt 400 ]]; then
+          echo "Token looks too short. Check that it's complete."
+      else
+          break
+      fi
+  done
+else
+  TOKEN="$ZNC_TOKEN"
+  echo "Using token from ZNC_TOKEN environment variable."
+fi
 
 # -- Download and extract ZIP --
 if [[ "$SKIP_DOWNLOAD" != true ]]; then
@@ -131,8 +136,8 @@ echo "Running the installer from: $SETUP_BIN"
 echo "Passing token to installer: $(cat "$TOKEN_FILE" | cut -c1-20)...[redacted]"
 sleep 1
 
-# -- Use script to simulate interactive terminal --
-script -q -c "sudo \"$SETUP_BIN\" -token=\"$(cat \"$TOKEN_FILE\")\"" /dev/null
+# -- Use sudo directly to pass token as arg --
+sudo "$SETUP_BIN" -token="$(cat "$TOKEN_FILE")"
 
 # -- Optional: Clean up token file after install --
 # rm -f "$TOKEN_FILE"
