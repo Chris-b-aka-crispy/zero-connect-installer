@@ -9,7 +9,7 @@ INSTALL_DIR=""
 
 trap '[[ -f "$TMP_ZIP" ]] && rm -f "$TMP_ZIP"' EXIT
 
-# --- Parse CLI arguments ---
+# --- Parse CLI args ---
 while [[ $# -gt 0 ]]; do
   case $1 in
     --url)
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# --- Requirements ---
+# --- Tool check ---
 for tool in curl unzip sudo; do
   if ! command -v "$tool" &>/dev/null; then
     echo "[ERROR] Missing required tool: $tool"
@@ -38,24 +38,23 @@ if [[ -z "$SCRIPT_URL" ]]; then
   [[ -z "$SCRIPT_URL" ]] && { echo "[ERROR] No URL provided."; exit 1; }
 fi
 
-# --- Sanitize version from URL ---
+# --- Parse and sanitize version ---
 VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+' | sed 's/\.*$//')
 INSTALL_BASE="zero-connect-install-$VERSION"
 INSTALL_DIR="$INSTALL_BASE"
 
-# --- Clean if exists ---
+# --- Clean and prepare directory ---
 [[ -d "$INSTALL_DIR" ]] && rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 
-# --- Download + unzip ---
+# --- Download + extract ZIP ---
 TMP_ZIP=$(mktemp)
 echo "Downloading package..."
 curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
-
 echo "Extracting..."
 unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
 
-# --- Flatten if nested ---
+# --- Flatten if nested (auto-move inner folder contents) ---
 INNER_DIR=$(find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 -type d -name 'zero-connect-server-setup-*' | head -n 1)
 if [[ -n "$INNER_DIR" ]]; then
   echo "[INFO] Nested folder detected. Flattening..."
@@ -79,29 +78,29 @@ else
   echo "Using token from env var ZNC_TOKEN"
 fi
 
-# --- Move to install folder ---
+# --- Move into correct working directory ---
 cd "$INSTALL_DIR" || { echo "[ERROR] Failed to enter install folder"; exit 1; }
 
-# --- Confirm presence of needed files ---
-[[ -f "zero-connect-setup" ]] || { echo "[ERROR] zero-connect-setup missing"; exit 1; }
-[[ -d "dependencies" ]] || echo "[WARNING] 'dependencies/' folder missing — may cause setup failure."
-
+# --- Make sure all internal binaries/scripts are executable ---
+[[ -f "zero-connect-setup" ]] || { echo "[ERROR] zero-connect-setup not found."; exit 1; }
 chmod +x zero-connect-setup
+[[ -d "dependencies/bin" ]] && chmod +x dependencies/bin/* || echo "[WARN] No bin folder found."
+[[ -d "dependencies/scripts" ]] && chmod +x dependencies/scripts/*.sh || echo "[WARN] No scripts folder found."
 
-# --- Save token to file (optional if needed by app) ---
+# --- Optional: Save token to file (if required by setup) ---
 echo "$TOKEN" > token
 chmod 600 token
 
-# --- Launch installer ---
+# --- Launch installer from correct dir ---
 echo ""
 echo "=============================================================="
 echo "Launching Connect Server installer..."
 echo "Path: $(pwd)"
-echo "Token: ${TOKEN:0:20}...[redacted]"
+echo "Token preview: ${TOKEN:0:20}...[redacted]"
 echo "=============================================================="
 echo ""
 
 sudo ./zero-connect-setup -token "$TOKEN"
 
-# --- Clean up token ---
+# --- Clean up token file ---
 rm -f token
