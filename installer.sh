@@ -68,10 +68,49 @@ while true; do
     fi
 done
 
-# -- Extract version and set install dir --
+# -- Extract version and determine install dir --
 VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
-INSTALL_DIR="zero-connect-install-$VERSION"
+BASE_DIR="zero-connect-install-$VERSION"
+INSTALL_DIR="$BASE_DIR"
+
+# -- Handle duplicate folder names --
+if [[ -d "$BASE_DIR" ]]; then
+    echo ""
+    echo "Directory '$BASE_DIR' already exists."
+
+    read -p "Would you like to (O)verwrite or (C)reate a new folder? [O/c]: " DIR_CHOICE
+    DIR_CHOICE=${DIR_CHOICE,,}
+
+    if [[ "$DIR_CHOICE" == "c" ]]; then
+        SUFFIX=1
+        while [[ -d "${BASE_DIR}-${SUFFIX}" ]]; do
+            ((SUFFIX++))
+        done
+        INSTALL_DIR="${BASE_DIR}-${SUFFIX}"
+    else
+        rm -rf "$BASE_DIR"
+    fi
+fi
+
 mkdir -p "$INSTALL_DIR"
+
+# -- Download ZIP to temp file and extract into install dir --
+echo ""
+echo "Downloading and extracting package..."
+TMP_ZIP=$(mktemp)
+curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
+unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
+rm -f "$TMP_ZIP"
+
+# -- Find the installer inside extracted folders --
+SETUP_BIN=$(find "$INSTALL_DIR" -type f -name "zero-connect-setup" | head -n 1)
+if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
+    echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
+    exit 1
+fi
+
+chmod +x "$SETUP_BIN"
+
 
 # -- Download ZIP to temp file and extract into install dir --
 echo ""
