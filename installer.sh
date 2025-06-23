@@ -43,41 +43,65 @@ for tool in curl unzip sudo; do
     install_package_if_missing "$tool"
 done
 
-# -- Prompt for URL --
-echo ""
-read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
-if [[ -z "$SCRIPT_URL" ]]; then
-    echo "[ERROR] No URL provided. Exiting."
-    exit 1
-fi
-
-# -- Extract version and determine install dir --
-VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
-BASE_DIR="zero-connect-install-$VERSION"
-INSTALL_DIR="$BASE_DIR"
-
-# -- Check for existing installation before token prompt --
-if [[ -d "$INSTALL_DIR" ]]; then
+# -- Check for existing version installation before prompting for URL --
+EXISTING_DIR=$(find . -maxdepth 1 -type d -name 'zero-connect-install-*' | sort | tail -n 1)
+if [[ -n "$EXISTING_DIR" && -f "$EXISTING_DIR"/*/zero-connect-setup ]]; then
+    VERSION_GUESS=$(echo "$EXISTING_DIR" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     echo ""
-    echo "We detected version '$VERSION' is already downloaded in: $INSTALL_DIR"
-    read -p "Would you like to (R)edownload, (S)kip download and run install, or (E)xit? [R/s/e]: " ACTION
-    ACTION=${ACTION,,}
+    echo "Detected existing installed version at: $EXISTING_DIR"
+    read -p "Would you like to (U)pdate with new URL, (S)kip download and re-run install, or (E)xit? [U/s/e]: " EXISTING_ACTION
+    EXISTING_ACTION=${EXISTING_ACTION,,}
 
-    if [[ "$ACTION" == "s" ]]; then
-        echo "Skipping download. Using existing files in $INSTALL_DIR."
+    if [[ "$EXISTING_ACTION" == "s" ]]; then
+        INSTALL_DIR="$EXISTING_DIR"
         SKIP_DOWNLOAD=true
-    elif [[ "$ACTION" == "e" ]]; then
+    elif [[ "$EXISTING_ACTION" == "e" ]]; then
         echo "Exiting."
         exit 0
     else
-        echo "Redownloading. Cleaning up existing directory..."
-        rm -rf "$INSTALL_DIR"
+        SKIP_DOWNLOAD=false
+        echo "Proceeding to prompt for new URL..."
+    fi
+else
+    SKIP_DOWNLOAD=false
+fi
+
+# -- Prompt for URL only if needed --
+if [[ "$SKIP_DOWNLOAD" != true ]]; then
+    echo ""
+    read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
+    if [[ -z "$SCRIPT_URL" ]]; then
+        echo "[ERROR] No URL provided. Exiting."
+        exit 1
+    fi
+
+    # -- Extract version and determine install dir --
+    VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
+    BASE_DIR="zero-connect-install-$VERSION"
+    INSTALL_DIR="$BASE_DIR"
+
+    if [[ -d "$INSTALL_DIR" ]]; then
+        echo ""
+        echo "We detected version '$VERSION' is already downloaded in: $INSTALL_DIR"
+        read -p "Would you like to (R)edownload, (S)kip download and run install, or (E)xit? [R/s/e]: " ACTION
+        ACTION=${ACTION,,}
+
+        if [[ "$ACTION" == "s" ]]; then
+            echo "Skipping download. Using existing files in $INSTALL_DIR."
+            SKIP_DOWNLOAD=true
+        elif [[ "$ACTION" == "e" ]]; then
+            echo "Exiting."
+            exit 0
+        else
+            echo "Redownloading. Cleaning up existing directory..."
+            rm -rf "$INSTALL_DIR"
+            mkdir -p "$INSTALL_DIR"
+            SKIP_DOWNLOAD=false
+        fi
+    else
         mkdir -p "$INSTALL_DIR"
         SKIP_DOWNLOAD=false
     fi
-else
-    mkdir -p "$INSTALL_DIR"
-    SKIP_DOWNLOAD=false
 fi
 
 # -- Prompt for token only if not set via env var --
@@ -144,5 +168,5 @@ sudo "$SETUP_BIN" -token="$(cat "$TOKEN_FILE")"
 
 echo ""
 echo "Connect Server installation complete."
-echo "Installed from: $SCRIPT_URL"
+echo "Installed from: ${SCRIPT_URL:-"(skipped)"}"
 echo ""
