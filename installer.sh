@@ -73,33 +73,38 @@ VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
 BASE_DIR="zero-connect-install-$VERSION"
 INSTALL_DIR="$BASE_DIR"
 
-# -- Handle duplicate folder names --
-if [[ -d "$BASE_DIR" ]]; then
+if [[ -d "$INSTALL_DIR" ]]; then
     echo ""
-    echo "Directory '$BASE_DIR' already exists."
-    read -p "Would you like to (O)verwrite or (C)reate a new folder? [O/c]: " DIR_CHOICE
-    DIR_CHOICE=${DIR_CHOICE,,}
+    echo "A folder for version '$VERSION' already exists: $INSTALL_DIR"
+    read -p "Would you like to (R)edownload, (S)kip download and run install, or (E)xit? [R/s/e]: " ACTION
+    ACTION=${ACTION,,}
 
-    if [[ "$DIR_CHOICE" == "c" ]]; then
-        SUFFIX=1
-        while [[ -d "${BASE_DIR}-${SUFFIX}" ]]; do
-            ((SUFFIX++))
-        done
-        INSTALL_DIR="${BASE_DIR}-${SUFFIX}"
+    if [[ "$ACTION" == "s" ]]; then
+        echo "Skipping download. Using existing files in $INSTALL_DIR."
+        SKIP_DOWNLOAD=true
+    elif [[ "$ACTION" == "e" ]]; then
+        echo "Exiting."
+        exit 0
     else
-        rm -rf "$BASE_DIR"
+        echo "Redownloading. Cleaning up existing directory..."
+        rm -rf "$INSTALL_DIR"
+        mkdir -p "$INSTALL_DIR"
+        SKIP_DOWNLOAD=false
     fi
+else
+    mkdir -p "$INSTALL_DIR"
+    SKIP_DOWNLOAD=false
 fi
 
-mkdir -p "$INSTALL_DIR"
-
-# -- Download ZIP to temp file and extract into install dir --
-echo ""
-echo "Downloading and extracting package..."
-TMP_ZIP=$(mktemp)
-curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
-unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
-rm -f "$TMP_ZIP"
+# -- Download and extract ZIP --
+if [[ "$SKIP_DOWNLOAD" != true ]]; then
+    echo ""
+    echo "Downloading and extracting package..."
+    TMP_ZIP=$(mktemp)
+    curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
+    unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
+    rm -f "$TMP_ZIP"
+fi
 
 # -- Find and run the installer --
 SETUP_BIN=$(find "$INSTALL_DIR" -type f -name "zero-connect-setup" | head -n 1)
@@ -109,17 +114,14 @@ if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
 fi
 
 chmod +x "$SETUP_BIN"
+echo "$TOKEN" > "$(dirname "$SETUP_BIN")/token"
 
 echo ""
 echo "Running the installer from: $SETUP_BIN"
 sleep 1
-# Save the token to a file in the setup directory
-TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
-echo "$TOKEN" > "$TOKEN_FILE"
-
-# Run the installer using the token file
-sudo "$SETUP_BIN" -token "$(cat "$TOKEN_FILE")"
+sudo "$SETUP_BIN" -token "$(cat $(dirname "$SETUP_BIN")/token)"
 
 echo ""
 echo "Connect Server installation complete."
 echo "Installed from: $SCRIPT_URL"
+echo ""
