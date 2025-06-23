@@ -9,16 +9,38 @@ echo " automatically installing the Connect Server"
 echo "=============================================================="
 echo ""
 
-# Check required tools
-for tool in curl unzip; do
-    if ! command -v $tool &>/dev/null; then
-        echo "[ERROR] Required tool '$tool' is not installed."
-        echo "        Please install it and re-run this script."
-        exit 1
+# -- Function: Install missing package if user agrees --
+install_package_if_missing() {
+    TOOL="$1"
+    if ! command -v "$TOOL" &>/dev/null; then
+        echo "[!] '$TOOL' is not installed."
+
+        read -p "    → Would you like to install '$TOOL'? [Y/n] " RESPONSE
+        RESPONSE=${RESPONSE,,} # lowercase
+
+        if [[ "$RESPONSE" == "y" || -z "$RESPONSE" ]]; then
+            if command -v apt &>/dev/null; then
+                sudo apt update && sudo apt install -y "$TOOL"
+            elif command -v yum &>/dev/null; then
+                sudo yum install -y "$TOOL"
+            else
+                echo "[ERROR] Unsupported package manager. Please install '$TOOL' manually."
+                exit 1
+            fi
+        else
+            echo "[ERROR] '$TOOL' is required to proceed. Exiting."
+            exit 1
+        fi
     fi
+}
+
+# -- Check required tools --
+echo "[*] Checking required tools..."
+for tool in curl unzip sudo; do
+    install_package_if_missing "$tool"
 done
 
-# Prompt for the download URL
+# -- Prompt for ZIP URL --
 echo ""
 read -p "🔗 Enter the Connect Server setup ZIP URL: " SCRIPT_URL
 
@@ -27,9 +49,9 @@ if [[ -z "$SCRIPT_URL" ]]; then
     exit 1
 fi
 
-# Prompt for the token securely
+# -- Prompt for secure token input --
 echo ""
-read -s -p "Enter your Zero Networks Connect Server token: " TOKEN
+read -s -p "🔑 Enter your Zero Networks Connect Server token: " TOKEN
 echo ""
 
 if [[ -z "$TOKEN" ]]; then
@@ -37,12 +59,12 @@ if [[ -z "$TOKEN" ]]; then
     exit 1
 fi
 
-# Create temp folder
+# -- Prepare temp working directory --
 INSTALL_DIR="zero-connect-install-$(date +%s)"
 mkdir "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
-# Download and extract
+# -- Download + unzip setup package --
 echo ""
 echo "[*] Downloading setup package..."
 curl -L -o connect-server.zip "$SCRIPT_URL"
@@ -50,7 +72,6 @@ curl -L -o connect-server.zip "$SCRIPT_URL"
 echo "[*] Extracting..."
 unzip -q connect-server.zip
 
-# Locate the setup binary
 SETUP_BIN="./zero-connect-setup"
 if [[ ! -f "$SETUP_BIN" ]]; then
     echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
@@ -59,11 +80,11 @@ fi
 
 chmod +x "$SETUP_BIN"
 
-# Run the installer with token
+# -- Run setup with token --
 echo "[*] Starting installation..."
 sudo "$SETUP_BIN" -token "$TOKEN"
 
 echo ""
-echo "Connect Server installation complete."
-echo "Installed from: $SCRIPT_URL"
+echo "✅ Connect Server installation complete."
+echo "📁 Installed from: $SCRIPT_URL"
 echo ""
