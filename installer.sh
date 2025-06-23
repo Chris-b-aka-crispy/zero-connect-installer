@@ -44,8 +44,8 @@ for tool in curl unzip sudo; do
 done
 
 # -- Check for existing version installation before prompting for URL --
-EXISTING_DIR=$(find . -maxdepth 1 -type d -name 'zero-connect-install-*' | sort | tail -n 1)
-if [[ -n "$EXISTING_DIR" && -f "$EXISTING_DIR"/*/zero-connect-setup ]]; then
+EXISTING_DIR=$(find . -maxdepth 1 -type d -name 'zero-connect-server-setup-*' | sort | tail -n 1)
+if [[ -n "$EXISTING_DIR" && -f "$EXISTING_DIR"/zero-connect-setup ]]; then
     VERSION_GUESS=$(echo "$EXISTING_DIR" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     echo ""
     echo "Detected existing installed version at: $EXISTING_DIR"
@@ -75,10 +75,8 @@ if [[ "$SKIP_DOWNLOAD" != true ]]; then
         exit 1
     fi
 
-    # -- Extract version and determine install dir --
     VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
-    BASE_DIR="zero-connect-install-$VERSION"
-    INSTALL_DIR="$BASE_DIR"
+    INSTALL_DIR="zero-connect-server-setup-$VERSION"
 
     if [[ -d "$INSTALL_DIR" ]]; then
         echo ""
@@ -145,7 +143,7 @@ fi
 
 chmod +x "$SETUP_BIN"
 
-# -- Save token to file with secure permissions --
+# -- Save token to file and export as shell variable --
 TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
 echo "$TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
@@ -155,18 +153,21 @@ if [[ ! -f "$TOKEN_FILE" ]]; then
     exit 1
 fi
 
+# -- Export and run installer with correct flag --
+cd "$(dirname "$SETUP_BIN")"
+token=$(cat token)
+
 echo ""
 echo "Running the installer from: $SETUP_BIN"
-echo "Passing token to installer: $(cat "$TOKEN_FILE" | cut -c1-20)...[redacted]"
+echo "Passing token to installer: ${token:0:20}...[redacted]"
 sleep 1
-
-# -- Use sudo directly to pass token as arg --
-sudo "$SETUP_BIN" -token="$(cat "$TOKEN_FILE")"
+sudo ./zero-connect-setup -token "$token"
 
 # -- Optional: Clean up token file after install --
-# rm -f "$TOKEN_FILE"
+rm -f token
 
 echo ""
 echo "Connect Server installation complete."
 echo "Installed from: ${SCRIPT_URL:-"(skipped)"}"
+echo "Follow the on-screen prompts to complete setup."
 echo ""
