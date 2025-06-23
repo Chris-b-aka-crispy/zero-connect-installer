@@ -108,8 +108,7 @@ if a PID is returned, stop the process:
 `sudo rm -f /var/lib/dpkg/lock-frontend`
 
 Then re-run the installer.
-```bash
-sudo lsof /var/lib/dpkg/lock-frontend
+
 ## License
 
 © Zero Networks. All rights reserved. Unauthorized distribution or modification is prohibited.
