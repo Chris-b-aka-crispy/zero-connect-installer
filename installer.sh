@@ -65,9 +65,13 @@ while true; do
 done
 
 # -- Download and unzip --
-INSTALL_DIR="zero-connect-install-$(date +%s)"
-mkdir "$INSTALL_DIR"
+# Extract version from ZIP filename (e.g., 5.1.3.0 from URL)
+VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
+INSTALL_DIR="zero-connect-install-$VERSION"
+
+mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
+
 
 echo ""
 echo "[*] Downloading setup package..."
