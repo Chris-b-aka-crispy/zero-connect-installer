@@ -156,9 +156,3 @@ sudo ./zero-connect-setup -token "$token"
 
 # -- Optional: Clean up token file after install --
 rm -f token
-
-echo ""
-echo "Connect Server installation complete."
-echo "Installed from: ${SCRIPT_URL:-"(skipped)"}"
-echo "Follow the on-screen prompts to complete setup."
-echo ""
