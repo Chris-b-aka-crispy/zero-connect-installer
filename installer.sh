@@ -51,31 +51,15 @@ if [[ -z "$SCRIPT_URL" ]]; then
     exit 1
 fi
 
-# -- Prompt for token with validation loop --
-while true; do
-    echo ""
-    read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
-    echo ""
-
-    if [[ -z "$TOKEN" ]]; then
-        echo "Token is blank. Please try again."
-    elif [[ "$TOKEN" =~ \  ]]; then
-        echo "Token contains spaces. Check for copy-paste errors."
-    elif [[ ${#TOKEN} -lt 400 ]]; then
-        echo "Token looks too short. Check that it's complete."
-    else
-        break
-    fi
-done
-
 # -- Extract version and determine install dir --
 VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
 BASE_DIR="zero-connect-install-$VERSION"
 INSTALL_DIR="$BASE_DIR"
 
+# -- Check for existing installation before token prompt --
 if [[ -d "$INSTALL_DIR" ]]; then
     echo ""
-    echo "A folder for version '$VERSION' already exists: $INSTALL_DIR"
+    echo "We detected version '$VERSION' is already downloaded in: $INSTALL_DIR"
     read -p "Would you like to (R)edownload, (S)kip download and run install, or (E)xit? [R/s/e]: " ACTION
     ACTION=${ACTION,,}
 
@@ -96,6 +80,23 @@ else
     SKIP_DOWNLOAD=false
 fi
 
+# -- Prompt for token with validation loop --
+while true; do
+    echo ""
+    read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
+    echo ""
+
+    if [[ -z "$TOKEN" ]]; then
+        echo "Token is blank. Please try again."
+    elif [[ "$TOKEN" =~ \  ]]; then
+        echo "Token contains spaces. Check for copy-paste errors."
+    elif [[ ${#TOKEN} -lt 400 ]]; then
+        echo "Token looks too short. Check that it's complete."
+    else
+        break
+    fi
+done
+
 # -- Download and extract ZIP --
 if [[ "$SKIP_DOWNLOAD" != true ]]; then
     echo ""
@@ -114,12 +115,22 @@ if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
 fi
 
 chmod +x "$SETUP_BIN"
-echo "$TOKEN" > "$(dirname "$SETUP_BIN")/token"
+
+# -- Save token to file and verify --
+TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
+echo "$TOKEN" > "$TOKEN_FILE"
+if [[ ! -f "$TOKEN_FILE" ]]; then
+    echo "[ERROR] Failed to save token to: $TOKEN_FILE"
+    exit 1
+fi
 
 echo ""
 echo "Running the installer from: $SETUP_BIN"
 sleep 1
-sudo "$SETUP_BIN" -token "$(cat $(dirname "$SETUP_BIN")/token)"
+sudo "$SETUP_BIN" -token "$(cat "$TOKEN_FILE")"
+
+# -- Optional: Clean up token file after install --
+# rm -f "$TOKEN_FILE"
 
 echo ""
 echo "Connect Server installation complete."
