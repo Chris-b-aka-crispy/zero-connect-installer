@@ -16,7 +16,7 @@ install_package_if_missing() {
         echo "[!] '$TOOL' is not installed."
 
         read -p "    → Would you like to install '$TOOL'? [Y/n] " RESPONSE
-        RESPONSE=${RESPONSE,,} # lowercase
+        RESPONSE=${RESPONSE,,}
 
         if [[ "$RESPONSE" == "y" || -z "$RESPONSE" ]]; then
             if command -v apt &>/dev/null; then
@@ -39,6 +39,7 @@ echo "[*] Checking required tools..."
 for tool in curl unzip sudo; do
     install_package_if_missing "$tool"
 done
+
 
 # -- Prompt for ZIP URL --
 echo ""
