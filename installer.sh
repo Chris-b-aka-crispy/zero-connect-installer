@@ -104,3 +104,43 @@ sudo ./zero-connect-setup -token "$TOKEN"
 
 # --- Clean up token file ---
 rm -f token
+
+# --- Optional: analyze setup.log if setup failed ---
+if [[ -f "setup.log" ]]; then
+  echo ""
+  echo "=============================================================="
+  echo "Setup log found. Running recovery analysis..."
+  echo "=============================================================="
+
+  if grep -q "missing token" setup.log; then
+    echo "[ISSUE] Token was not passed correctly or was missing during setup."
+    echo "        Re-run with: sudo ./zero-connect-setup -token \"\$TOKEN\""
+  fi
+
+  if grep -q "not enough free disk space" setup.log; then
+    echo "[WARN] Low disk space detected. Recommended: at least 100GB free."
+    df -h /
+  fi
+
+  if grep -q "Unable to acquire the dpkg frontend lock" setup.log; then
+    echo "[ISSUE] APT was locked by another process."
+    echo "        Run: sudo lsof /var/lib/dpkg/lock-frontend"
+    echo "        Then: sudo kill -9 <PID> && sudo rm -f /var/lib/dpkg/lock-frontend"
+  fi
+
+  if grep -q "failed to install net tools" setup.log; then
+    echo "[FAIL] Could not install net-tools. Likely due to apt lock or missing perms."
+    echo "       Try: sudo apt update && sudo apt install net-tools"
+  fi
+
+  if grep -q "Validate core libraries" setup.log && grep -q "failed" setup.log; then
+    echo "[ERROR] Core library validation failed. Setup halted."
+    echo "        Check if dependencies/bin/zero-connect-server exists and is executable."
+  fi
+
+  echo "--------------------------------------------------------------"
+  echo "Log tail:"
+  tail -n 10 setup.log
+  echo "=============================================================="
+fi
+
