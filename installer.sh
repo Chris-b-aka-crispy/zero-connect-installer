@@ -78,7 +78,7 @@ if [[ "$SKIP_DOWNLOAD" != true ]]; then
         fi
     fi
 
-    VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
+    VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+' | sed 's/\.*$//')
     INSTALL_DIR="zero-connect-server-setup-$VERSION"
 
     if [[ -d "$INSTALL_DIR" ]]; then
