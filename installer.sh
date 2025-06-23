@@ -162,7 +162,13 @@ echo "Running: ./zero-connect-setup"
 echo "Token preview: ${token:0:20}...[redacted]"
 sleep 1
 
-sudo --preserve-env=token ./zero-connect-setup -token "$token"
+cd "$(dirname "$SETUP_BIN")"
+chmod +x ./zero-connect-setup
+echo "$token" > token && chmod 600 token
+
+# Execute the installer using sudo from within the target folder
+sudo bash -c './zero-connect-setup -token "$(cat token)"'
+
 
 # -- Clean up token --
 rm -f token
