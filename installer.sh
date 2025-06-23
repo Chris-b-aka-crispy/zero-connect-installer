@@ -2,6 +2,22 @@
 
 set -e
 
+SCRIPT_URL=""
+
+# -- Parse arguments for optional --url flag --
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --url)
+      SCRIPT_URL="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      exit 1
+      ;;
+  esac
+done
+
 echo ""
 echo "=============================================================="
 echo " Welcome to the official Zero Networks script for"
@@ -52,19 +68,21 @@ if [[ -n "$EXISTING_DIR" && -f "$EXISTING_DIR"/zero-connect-setup ]]; then
         exit 0
     else
         SKIP_DOWNLOAD=false
-        echo "Proceeding to prompt for new URL..."
+        echo "Proceeding to use new URL..."
     fi
 else
     SKIP_DOWNLOAD=false
 fi
 
-# -- Prompt for URL only if needed --
+# -- Prompt for URL only if not passed in or skipping not chosen --
 if [[ "$SKIP_DOWNLOAD" != true ]]; then
-    echo ""
-    read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
     if [[ -z "$SCRIPT_URL" ]]; then
-        echo "[ERROR] No URL provided. Exiting."
-        exit 1
+        echo ""
+        read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
+        if [[ -z "$SCRIPT_URL" ]]; then
+            echo "[ERROR] No URL provided. Exiting."
+            exit 1
+        fi
     fi
 
     VERSION=$(echo "$SCRIPT_URL" | grep -oP 'zero-connect-server-setup-\K[0-9\.]+')
