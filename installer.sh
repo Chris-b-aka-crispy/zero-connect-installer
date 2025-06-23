@@ -118,8 +118,8 @@ chmod +x "$SETUP_BIN"
 
 # -- Save token to file with secure permissions --
 TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
-echo "$TOKEN" | sudo tee "$TOKEN_FILE" > /dev/null
-sudo chmod 600 "$TOKEN_FILE"
+echo "$TOKEN" > "$TOKEN_FILE"
+chmod 600 "$TOKEN_FILE"
 
 if [[ ! -f "$TOKEN_FILE" ]]; then
     echo "[ERROR] Failed to save token to: $TOKEN_FILE"
@@ -132,7 +132,7 @@ sleep 1
 sudo "$SETUP_BIN" -token "$(cat "$TOKEN_FILE")"
 
 # -- Optional: Clean up token file after install --
-# sudo rm -f "$TOKEN_FILE"
+rm -f "$TOKEN_FILE"
 
 echo ""
 echo "Connect Server installation complete."
