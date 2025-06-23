@@ -129,7 +129,7 @@ fi
 echo ""
 echo "Running the installer from: $SETUP_BIN"
 sleep 1
-sudo "$SETUP_BIN" -token "$(cat "$TOKEN_FILE")"
+sudo "$SETUP_BIN" "-token=$(cat "$TOKEN_FILE")"
 
 # -- Optional: Clean up token file after install --
 rm -f "$TOKEN_FILE"
