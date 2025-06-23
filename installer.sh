@@ -162,7 +162,7 @@ echo "Running: ./zero-connect-setup"
 echo "Token preview: ${token:0:20}...[redacted]"
 sleep 1
 
-sudo ./zero-connect-setup -token "$token"
+sudo --preserve-env=token ./zero-connect-setup -token "$token"
 
 # -- Clean up token --
 rm -f token
