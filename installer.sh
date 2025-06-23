@@ -13,25 +13,17 @@ echo ""
 TMP_ZIP=""
 trap '[[ -f "$TMP_ZIP" ]] && rm -f "$TMP_ZIP"' EXIT
 
-# -- Function: Install missing package if user agrees --
+# -- Function: Install missing package automatically --
 install_package_if_missing() {
     TOOL="$1"
     if ! command -v "$TOOL" &>/dev/null; then
-        echo ""
-        echo "'$TOOL' is not installed."
-        read -p "Would you like to install '$TOOL'? [Y/n] " RESPONSE
-        RESPONSE=${RESPONSE,,}
-        if [[ "$RESPONSE" == "y" || -z "$RESPONSE" ]]; then
-            if command -v apt &>/dev/null; then
-                sudo apt update && sudo apt install -y "$TOOL"
-            elif command -v yum &>/dev/null; then
-                sudo yum install -y "$TOOL"
-            else
-                echo "[ERROR] Unsupported package manager. Please install '$TOOL' manually."
-                exit 1
-            fi
+        echo "'$TOOL' is not installed. Installing..."
+        if command -v apt &>/dev/null; then
+            sudo apt update && sudo apt install -y "$TOOL"
+        elif command -v yum &>/dev/null; then
+            sudo yum install -y "$TOOL"
         else
-            echo "[ERROR] '$TOOL' is required to proceed. Exiting."
+            echo "[ERROR] Unsupported package manager. Please install '$TOOL' manually."
             exit 1
         fi
     fi
@@ -81,25 +73,16 @@ if [[ "$SKIP_DOWNLOAD" != true ]]; then
     if [[ -d "$INSTALL_DIR" ]]; then
         echo ""
         echo "We detected version '$VERSION' is already downloaded in: $INSTALL_DIR"
-        read -p "Would you like to (R)edownload, (S)kip download and run install, or (E)xit? [R/s/e]: " ACTION
-        ACTION=${ACTION,,}
-
-        if [[ "$ACTION" == "s" ]]; then
-            echo "Skipping download. Using existing files in $INSTALL_DIR."
-            SKIP_DOWNLOAD=true
-        elif [[ "$ACTION" == "e" ]]; then
-            echo "Exiting."
-            exit 0
-        else
-            echo "Redownloading. Cleaning up existing directory..."
-            rm -rf "$INSTALL_DIR"
-            mkdir -p "$INSTALL_DIR"
-            SKIP_DOWNLOAD=false
-        fi
-    else
-        mkdir -p "$INSTALL_DIR"
-        SKIP_DOWNLOAD=false
+        echo "Cleaning up existing directory for fresh install..."
+        rm -rf "$INSTALL_DIR"
     fi
+
+    mkdir -p "$INSTALL_DIR"
+    echo "Downloading and extracting package..."
+    TMP_ZIP=$(mktemp)
+    curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
+    unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
+    rm -f "$TMP_ZIP"
 fi
 
 # -- Prompt for token only if not set via env var --
@@ -122,16 +105,6 @@ if [[ -z "$ZNC_TOKEN" ]]; then
 else
   TOKEN="$ZNC_TOKEN"
   echo "Using token from ZNC_TOKEN environment variable."
-fi
-
-# -- Download and extract ZIP --
-if [[ "$SKIP_DOWNLOAD" != true ]]; then
-    echo ""
-    echo "Downloading and extracting package..."
-    TMP_ZIP=$(mktemp)
-    curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
-    unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
-    rm -f "$TMP_ZIP"
 fi
 
 # -- Find and run the installer --
