@@ -54,7 +54,7 @@ fi
 # -- Prompt for token with validation loop --
 while true; do
     echo ""
-    read -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
+    read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
     echo ""
 
     if [[ -z "$TOKEN" ]]; then
@@ -77,7 +77,6 @@ INSTALL_DIR="$BASE_DIR"
 if [[ -d "$BASE_DIR" ]]; then
     echo ""
     echo "Directory '$BASE_DIR' already exists."
-
     read -p "Would you like to (O)verwrite or (C)reate a new folder? [O/c]: " DIR_CHOICE
     DIR_CHOICE=${DIR_CHOICE,,}
 
@@ -102,7 +101,7 @@ curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
 unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
 rm -f "$TMP_ZIP"
 
-# -- Find the installer inside extracted folders --
+# -- Find and run the installer --
 SETUP_BIN=$(find "$INSTALL_DIR" -type f -name "zero-connect-setup" | head -n 1)
 if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
     echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
@@ -111,31 +110,11 @@ fi
 
 chmod +x "$SETUP_BIN"
 
-
-# -- Download ZIP to temp file and extract into install dir --
 echo ""
-echo "Downloading and extracting package..."
-TMP_ZIP=$(mktemp)
-curl -sSL "$SCRIPT_URL" -o "$TMP_ZIP"
-unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
-
-cd "$INSTALL_DIR"
-
-# -- Find and run the installer --
-SETUP_BIN=$(find . -type f -name "zero-connect-setup" | head -n 1)
-if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
-    echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
-    exit 1
-fi
-
-chmod +x "$SETUP_BIN"
-
-echo ""
-echo "Running the installer..."
+echo "Running the installer from: $SETUP_BIN"
 sleep 1
 sudo "$SETUP_BIN" -token "$TOKEN"
 
 echo ""
 echo "Connect Server installation complete."
 echo "Installed from: $SCRIPT_URL"
-echo ""
