@@ -20,8 +20,7 @@ done
 
 echo ""
 echo "=============================================================="
-echo " Welcome to the official Zero Networks script for"
-echo " automatically installing the Connect Server"
+echo " Zero Networks Connect Server Installation Script"
 echo "=============================================================="
 echo ""
 
@@ -33,9 +32,9 @@ trap '[[ -f "$TMP_ZIP" ]] && rm -f "$TMP_ZIP"' EXIT
 install_package_if_missing() {
     TOOL="$1"
     if ! command -v "$TOOL" &>/dev/null; then
-        echo "'$TOOL' is not installed. Installing..."
+        echo "[INFO] '$TOOL' not found. Installing..."
         if command -v apt &>/dev/null; then
-            sudo apt update && sudo apt install -y "$TOOL"
+            sudo apt update -qq && sudo apt install -y "$TOOL"
         elif command -v yum &>/dev/null; then
             sudo yum install -y "$TOOL"
         else
@@ -46,7 +45,7 @@ install_package_if_missing() {
 }
 
 # -- Tool check --
-echo "Checking required tools..."
+echo "Checking system requirements..."
 for tool in curl unzip sudo; do
     install_package_if_missing "$tool"
 done
@@ -56,31 +55,31 @@ EXISTING_DIR=$(find . -maxdepth 1 -type d -name 'zero-connect-server-setup-*' | 
 if [[ -n "$EXISTING_DIR" && -f "$EXISTING_DIR"/zero-connect-setup ]]; then
     VERSION_GUESS=$(echo "$EXISTING_DIR" | grep -oP '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+')
     echo ""
-    echo "Detected existing installed version at: $EXISTING_DIR"
-    read -p "Would you like to (U)pdate with new URL, (S)kip download and re-run install, or (E)xit? [U/s/e]: " EXISTING_ACTION
+    echo "Found previously installed version: $VERSION_GUESS at $EXISTING_DIR"
+    read -p "(U)pdate with new URL, (S)kip download and re-run install, or (E)xit? [U/s/e]: " EXISTING_ACTION
     EXISTING_ACTION=${EXISTING_ACTION,,}
 
     if [[ "$EXISTING_ACTION" == "s" ]]; then
         INSTALL_DIR="$EXISTING_DIR"
         SKIP_DOWNLOAD=true
     elif [[ "$EXISTING_ACTION" == "e" ]]; then
-        echo "Exiting."
+        echo "Exiting installer."
         exit 0
     else
         SKIP_DOWNLOAD=false
-        echo "Proceeding to use new URL..."
+        echo "Proceeding with new package download."
     fi
 else
     SKIP_DOWNLOAD=false
 fi
 
-# -- Prompt for URL only if not passed in or skipping not chosen --
+# -- Prompt for URL if not provided via --url --
 if [[ "$SKIP_DOWNLOAD" != true ]]; then
     if [[ -z "$SCRIPT_URL" ]]; then
         echo ""
-        read -p "Enter the Connect Server setup ZIP URL: " SCRIPT_URL
+        read -p "Enter the Connect Server ZIP package URL: " SCRIPT_URL
         if [[ -z "$SCRIPT_URL" ]]; then
-            echo "[ERROR] No URL provided. Exiting."
+            echo "[ERROR] No URL provided. Aborting."
             exit 1
         fi
     fi
@@ -90,8 +89,8 @@ if [[ "$SKIP_DOWNLOAD" != true ]]; then
 
     if [[ -d "$INSTALL_DIR" ]]; then
         echo ""
-        echo "We detected version '$VERSION' is already downloaded in: $INSTALL_DIR"
-        echo "Cleaning up existing directory for fresh install..."
+        echo "Detected existing folder for version '$VERSION': $INSTALL_DIR"
+        echo "Cleaning directory to prepare for fresh installation."
         rm -rf "$INSTALL_DIR"
     fi
 
@@ -103,56 +102,55 @@ if [[ "$SKIP_DOWNLOAD" != true ]]; then
     rm -f "$TMP_ZIP"
 fi
 
-# -- Prompt for token only if not set via env var --
+# -- Prompt for token if not set via env var --
 if [[ -z "$ZNC_TOKEN" ]]; then
-  while true; do
-      echo ""
-      read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
-      echo ""
+    while true; do
+        echo ""
+        read -s -p "Enter your Zero Networks Connect Server token (input hidden): " TOKEN
+        echo ""
 
-      if [[ -z "$TOKEN" ]]; then
-          echo "Token is blank. Please try again."
-      elif [[ "$TOKEN" =~ \  ]]; then
-          echo "Token contains spaces. Check for copy-paste errors."
-      elif [[ ${#TOKEN} -lt 400 ]]; then
-          echo "Token looks too short. Check that it's complete."
-      else
-          break
-      fi
-  done
+        if [[ -z "$TOKEN" ]]; then
+            echo "Token is blank. Please try again."
+        elif [[ "$TOKEN" =~ \  ]]; then
+            echo "Token contains spaces. Check for copy-paste issues."
+        elif [[ ${#TOKEN} -lt 400 ]]; then
+            echo "Token appears incomplete. Please verify."
+        else
+            break
+        fi
+    done
 else
-  TOKEN="$ZNC_TOKEN"
-  echo "Using token from ZNC_TOKEN environment variable."
+    TOKEN="$ZNC_TOKEN"
+    echo "Using token from environment variable ZNC_TOKEN."
 fi
 
 # -- Find and run the installer --
 SETUP_BIN=$(find "$INSTALL_DIR" -type f -name "zero-connect-setup" | head -n 1)
 if [[ -z "$SETUP_BIN" || ! -f "$SETUP_BIN" ]]; then
-    echo "[ERROR] Installer file 'zero-connect-setup' not found after unzip."
+    echo "[ERROR] Installer executable not found."
     exit 1
 fi
 
 chmod +x "$SETUP_BIN"
 
-# -- Save token to file and export as shell variable --
+# -- Save token to file and export variable --
 TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
 echo "$TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
 
 if [[ ! -f "$TOKEN_FILE" ]]; then
-    echo "[ERROR] Failed to save token to: $TOKEN_FILE"
+    echo "[ERROR] Failed to write token file."
     exit 1
 fi
 
-# -- Export and run installer with correct flag --
 cd "$(dirname "$SETUP_BIN")"
 token=$(cat token)
 
 echo ""
-echo "Running the installer from: $SETUP_BIN"
-echo "Passing token to installer: ${token:0:20}...[redacted]"
+echo "Launching Connect Server installer..."
+echo "Running: $SETUP_BIN"
+echo "Token preview: ${token:0:20}...[redacted]"
 sleep 1
 sudo ./zero-connect-setup -token "$token"
 
-# -- Optional: Clean up token file after install --
 rm -f token
