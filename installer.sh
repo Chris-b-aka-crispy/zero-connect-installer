@@ -113,7 +113,12 @@ chmod +x "$SETUP_BIN"
 echo ""
 echo "Running the installer from: $SETUP_BIN"
 sleep 1
-sudo "$SETUP_BIN" -token "$TOKEN"
+# Save the token to a file in the setup directory
+TOKEN_FILE="$(dirname "$SETUP_BIN")/token"
+echo "$TOKEN" > "$TOKEN_FILE"
+
+# Run the installer using the token file
+sudo "$SETUP_BIN" -token "$(cat "$TOKEN_FILE")"
 
 echo ""
 echo "Connect Server installation complete."
