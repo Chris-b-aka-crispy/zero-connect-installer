@@ -91,7 +91,7 @@ bash <(curl -sSL https://raw.githubusercontent.com/Chris-b-aka-crispy/zero-conne
 
 ## License
 
-MIT
+© Zero Networks. All rights reserved. Unauthorized distribution or modification is prohibited.
 
 ---
 
