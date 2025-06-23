@@ -135,7 +135,7 @@ sleep 1
 script -q -c "sudo \"$SETUP_BIN\" -token=\"$(cat \"$TOKEN_FILE\")\"" /dev/null
 
 # -- Optional: Clean up token file after install --
-rm -f "$TOKEN_FILE"
+# rm -f "$TOKEN_FILE"
 
 echo ""
 echo "Connect Server installation complete."
