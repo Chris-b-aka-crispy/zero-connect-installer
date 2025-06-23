@@ -128,6 +128,7 @@ fi
 
 echo ""
 echo "Running the installer from: $SETUP_BIN"
+echo "Passing token to installer: $(cat "$TOKEN_FILE" | cut -c1-20)...[redacted]"
 sleep 1
 sudo "$SETUP_BIN" "-token=$(cat "$TOKEN_FILE")"
 
