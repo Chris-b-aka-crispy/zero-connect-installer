@@ -143,14 +143,26 @@ if [[ ! -f "$TOKEN_FILE" ]]; then
     exit 1
 fi
 
-cd "$(dirname "$SETUP_BIN")"
-token=$(cat token)
+# -- Move to install directory and execute setup properly --
+INSTALL_ROOT="$(dirname "$SETUP_BIN")"
+cd "$INSTALL_ROOT" || {
+    echo "[ERROR] Failed to change directory to $INSTALL_ROOT"
+    exit 1
+}
+
+[[ -f "zero-connect-setup" ]] || { echo "[ERROR] zero-connect-setup missing."; exit 1; }
+[[ -f "token" ]] || { echo "[ERROR] token file missing."; exit 1; }
+[[ -d "dependencies" ]] || echo "[WARNING] 'dependencies/' directory not found. Installer may fail."
+
+token=$(<token)
 
 echo ""
 echo "Launching Connect Server installer..."
-echo "Running: $SETUP_BIN"
+echo "Running: ./zero-connect-setup"
 echo "Token preview: ${token:0:20}...[redacted]"
 sleep 1
+
 sudo ./zero-connect-setup -token "$token"
 
+# -- Clean up token --
 rm -f token
