@@ -70,7 +70,7 @@ unzip -q "$TMP_ZIP" -d "$INSTALL_DIR"
 INNER_DIR=$(find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 -type d -name 'zero-connect-server-setup-*' | head -n 1)
 if [[ -n "$INNER_DIR" ]]; then
   echo "[INFO] Nested folder detected. Flattening..."
-  cp -r "$INNER_DIR"/* "$INSTALL_DIR/"
+  cp -r "$INNER_DIR"/. "$INSTALL_DIR/"
   rm -rf "$INNER_DIR"
 fi
 
